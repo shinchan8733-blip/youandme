@@ -1,4 +1,4 @@
-const API_KEY = 'YOUR_YOUTUBE_API_KEY'
+const API_KEY = 'AIzaSyAT7fV0WnZlFm8TqGUoiYWXBFxfFUCjFvY'
 const BASE_URL = 'https://www.googleapis.com/youtube/v3'
 
 export const searchSongs = async (query) => {
