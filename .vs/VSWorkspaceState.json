@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\src",
+    "\\src\\components",
+    "\\src\\components\\Auth",
+    "\\src\\components\\Discovery",
+    "\\src\\components\\Layout",
+    "\\src\\components\\OurSongs",
+    "\\src\\components\\Player",
+    "\\src\\components\\Queue",
+    "\\src\\config"
+  ],
+  "SelectedNode": "\\src\\App.jsx",
+  "PreviewInSolutionExplorer": false
+}
