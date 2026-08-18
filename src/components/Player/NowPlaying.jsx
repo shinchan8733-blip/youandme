@@ -2,6 +2,7 @@
 
 export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNext, onPrev, queue }) {
   const [playerReady, setPlayerReady] = useState(false)
+  const [videoVisible, setVideoVisible] = useState(true)
   const playerInstanceRef = useRef(null)
   const currentSongIdRef = useRef(null)
 
@@ -53,10 +54,21 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
     <div className="flex flex-col min-h-screen bg-background px-4 pt-12">
       {currentSong ? (
         <>
-          {/* YouTube Player */}
-          <div className="rounded-2xl overflow-hidden bg-black mb-6">
+          {/* YouTube Player - stays mounted so audio keeps playing even when hidden */}
+          <div
+            className={`rounded-2xl overflow-hidden bg-black mb-6 transition-all ${
+              videoVisible ? 'block' : 'sr-only'
+            }`}
+          >
             <div id="yt-player" className="w-full aspect-video" />
           </div>
+
+          {!videoVisible && (
+            <div className="flex flex-col items-center justify-center mb-6 py-10 bg-surface/50 rounded-2xl">
+              <span className="text-6xl mb-2">🎧</span>
+              <span className="text-subtext text-xs">Audio only</span>
+            </div>
+          )}
 
           {/* Song Info */}
           <div className="text-center mb-4">
@@ -69,10 +81,16 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
             )}
           </div>
 
-          {/* Sync badge */}
-          <div className="flex items-center justify-center gap-2 mb-8">
+          {/* Sync badge + audio/video toggle */}
+          <div className="flex items-center justify-center gap-3 mb-8">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             <span className="text-subtext text-xs">Synced with your partner</span>
+            <button
+              onClick={() => setVideoVisible(v => !v)}
+              className="ml-2 px-3 py-1 rounded-full bg-surface border border-white/10 text-subtext text-xs"
+            >
+              {videoVisible ? '🎧 Audio only' : '📺 Show video'}
+            </button>
           </div>
 
           {/* Controls */}
