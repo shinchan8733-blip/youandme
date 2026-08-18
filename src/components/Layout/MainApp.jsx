@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import NowPlaying from '../Player/NowPlaying'
 import QueueView from '../Queue/QueueView'
 import DiscoveryView from '../Discovery/DiscoveryView'
@@ -13,9 +13,27 @@ export default function MainApp({ user }) {
   const [queue, setQueue] = useState([])
   const [currentSong, setCurrentSong] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [toast, setToast] = useState(null)
+
+  const knownIdsRef = useRef(new Set())
+  const isFirstLoadRef = useRef(true)
 
   useEffect(() => {
     const unsub = observeQueue((songs) => {
+      const myName = getCurrentUser()?.email?.split('@')[0]
+
+      if (isFirstLoadRef.current) {
+        songs.forEach(s => knownIdsRef.current.add(s.id))
+        isFirstLoadRef.current = false
+      } else {
+        const newSongs = songs.filter(s => !knownIdsRef.current.has(s.id))
+        const partnerSong = newSongs.find(s => s.addedBy && s.addedBy !== myName)
+        if (partnerSong) {
+          setToast(`${partnerSong.addedBy} added "${partnerSong.title}"`)
+        }
+        songs.forEach(s => knownIdsRef.current.add(s.id))
+      }
+
       setQueue(songs)
       if (!currentSong && songs.length > 0) {
         setCurrentSong(songs[0])
@@ -23,6 +41,12 @@ export default function MainApp({ user }) {
     })
     return unsub
   }, [currentSong])
+
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), 4000)
+    return () => clearTimeout(timer)
+  }, [toast])
 
   useEffect(() => {
     const unsub = observePlayback((state) => {
@@ -60,7 +84,14 @@ export default function MainApp({ user }) {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col h-screen bg-background overflow-hidden relative">
+      {toast && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-surface border border-accent/40 text-white text-sm px-4 py-3 rounded-xl shadow-lg shadow-black/40 flex items-center gap-2 max-w-[90%]">
+          <span className="text-accent">♥</span>
+          <span className="truncate">{toast}</span>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto pb-20">
         {tab === 'player' && (
           <NowPlaying
