@@ -5,15 +5,25 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
   const [videoVisible, setVideoVisible] = useState(true)
   const playerInstanceRef = useRef(null)
   const currentSongIdRef = useRef(null)
+  const pendingVideoIdRef = useRef(null)
 
   useEffect(() => {
     if (!currentSong) return
     if (currentSongIdRef.current === currentSong.id) return
     currentSongIdRef.current = currentSong.id
 
+    const loadOrQueue = (videoId) => {
+      const player = playerInstanceRef.current
+      if (player && typeof player.loadVideoById === 'function') {
+        player.loadVideoById(videoId)
+      } else {
+        pendingVideoIdRef.current = videoId
+      }
+    }
+
     const initPlayer = () => {
       if (playerInstanceRef.current) {
-        playerInstanceRef.current.loadVideoById(currentSong.id)
+        loadOrQueue(currentSong.id)
         return
       }
       playerInstanceRef.current = new window.YT.Player('yt-player', {
@@ -26,7 +36,13 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
           rel: 0,
         },
         events: {
-          onReady: () => setPlayerReady(true),
+          onReady: () => {
+            setPlayerReady(true)
+            if (pendingVideoIdRef.current && pendingVideoIdRef.current !== currentSong.id) {
+              playerInstanceRef.current.loadVideoById(pendingVideoIdRef.current)
+              pendingVideoIdRef.current = null
+            }
+          },
           onStateChange: (e) => {
             if (e.data === 0) onNext()
           }
@@ -43,6 +59,7 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
 
   useEffect(() => {
     if (!playerInstanceRef.current || !playerReady) return
+    if (typeof playerInstanceRef.current.playVideo !== 'function') return
     if (isPlaying) {
       playerInstanceRef.current.playVideo()
     } else {
