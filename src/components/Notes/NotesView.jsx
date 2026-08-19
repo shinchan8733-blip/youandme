@@ -1,13 +1,17 @@
 ﻿import { useState, useEffect, useRef } from 'react'
 import { addTextNote, addVoiceNote, observeNotes } from '../../services/notesService'
 
+const MAX_RECORD_SECONDS = 30
+
 export default function NotesView() {
   const [notes, setNotes] = useState([])
   const [text, setText] = useState('')
   const [recording, setRecording] = useState(false)
+  const [seconds, setSeconds] = useState(0)
   const [uploading, setUploading] = useState(false)
   const mediaRecorderRef = useRef(null)
   const chunksRef = useRef([])
+  const timerRef = useRef(null)
   const bottomRef = useRef(null)
 
   useEffect(() => {
@@ -26,25 +30,51 @@ export default function NotesView() {
     await addTextNote(value)
   }
 
+  const blobToBase64 = (blob) => new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const recorder = new MediaRecorder(stream)
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : 'audio/webm'
+      const recorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 24000 })
       chunksRef.current = []
       recorder.ondataavailable = (e) => chunksRef.current.push(e.data)
       recorder.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
+        clearInterval(timerRef.current)
         stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(chunksRef.current, { type: mimeType })
         setUploading(true)
         try {
-          await addVoiceNote(blob)
+          const base64 = await blobToBase64(blob)
+          await addVoiceNote(base64, mimeType)
+        } catch (err) {
+          alert('Could not save the voice note. Try a shorter recording.')
         } finally {
           setUploading(false)
+          setSeconds(0)
         }
       }
       recorder.start()
       mediaRecorderRef.current = recorder
       setRecording(true)
+      setSeconds(0)
+
+      let elapsed = 0
+      timerRef.current = setInterval(() => {
+        elapsed += 1
+        setSeconds(elapsed)
+        if (elapsed >= MAX_RECORD_SECONDS) {
+          recorder.stop()
+          setRecording(false)
+        }
+      }, 1000)
     } catch (err) {
       alert('Microphone access is needed to record a voice note.')
     }
@@ -69,7 +99,7 @@ export default function NotesView() {
             {note.type === 'text' ? (
               <p className="text-white text-sm whitespace-pre-wrap">{note.content}</p>
             ) : (
-              <audio controls src={note.url} className="w-full h-10" />
+              <audio controls src={note.audioData} className="w-full h-10" />
             )}
             <p className="text-subtext text-[10px] mt-1">
               {new Date(note.createdAt).toLocaleString()}
@@ -78,6 +108,12 @@ export default function NotesView() {
         ))}
         <div ref={bottomRef} />
       </div>
+
+      {recording && (
+        <p className="text-center text-xs text-red-400 mb-1">
+          Recording... {seconds}s / {MAX_RECORD_SECONDS}s
+        </p>
+      )}
 
       <div className="flex items-center gap-2 pb-6 pt-2 border-t border-white/10">
         <input

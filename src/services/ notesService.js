@@ -1,6 +1,5 @@
-import { db, storage } from '../config/firebase'
+import { db } from '../config/firebase'
 import { ref as dbRef, push, onValue, off } from 'firebase/database'
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getCurrentUser } from './authService'
 
 export const addTextNote = async (text) => {
@@ -14,17 +13,13 @@ export const addTextNote = async (text) => {
   })
 }
 
-export const addVoiceNote = async (audioBlob) => {
+export const addVoiceNote = async (base64Audio, mimeType) => {
   const user = getCurrentUser()
-  const fileName = `voice-notes/${Date.now()}-${user?.uid || 'anon'}.webm`
-  const fileRef = storageRef(storage, fileName)
-  await uploadBytes(fileRef, audioBlob)
-  const url = await getDownloadURL(fileRef)
-
   const notesRef = dbRef(db, 'notes')
   await push(notesRef, {
     type: 'voice',
-    url,
+    audioData: base64Audio,
+    mimeType,
     addedBy: user?.email?.split('@')[0] || 'unknown',
     createdAt: Date.now()
   })
