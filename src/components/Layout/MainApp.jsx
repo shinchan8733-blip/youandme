@@ -5,6 +5,8 @@ import DiscoveryView from '../Discovery/DiscoveryView'
 import OurSongsView from '../OurSongs/OurSongsView'
 import NotesView from '../Notes/NotesView'
 import HistoryView from '../History/HistoryView'
+import GenresView from '../Genres/GenresView'
+import PhotosView from '../Photos/PhotosView'
 import BottomNav from './BottomNav'
 import { observeQueue, addToQueue } from '../../services/queueService'
 import { observePlayback, broadcastPlayback } from '../../services/syncService'
@@ -148,8 +150,10 @@ export default function MainApp({ user }) {
             onAddToQueue={addToQueue}
           />
         )}
+        {tab === 'genres' && <GenresView onPlaySong={playSong} />}
         {tab === 'notes' && <NotesView />}
         {tab === 'history' && <HistoryView onPlaySong={playSong} />}
+        {tab === 'photos' && <PhotosView />}
       </div>
       <BottomNav tab={tab} setTab={setTab} />
     </div>
