@@ -4,10 +4,12 @@ import QueueView from '../Queue/QueueView'
 import DiscoveryView from '../Discovery/DiscoveryView'
 import OurSongsView from '../OurSongs/OurSongsView'
 import NotesView from '../Notes/NotesView'
+import HistoryView from '../History/HistoryView'
 import BottomNav from './BottomNav'
 import { observeQueue, addToQueue } from '../../services/queueService'
 import { observePlayback, broadcastPlayback } from '../../services/syncService'
 import { getCurrentUser } from '../../services/authService'
+import { logPlay } from '../../services/historyService'
 
 export default function MainApp({ user }) {
   const [tab, setTab] = useState('player')
@@ -15,6 +17,7 @@ export default function MainApp({ user }) {
   const [currentSong, setCurrentSong] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [toast, setToast] = useState(null)
+  const [remoteSeek, setRemoteSeek] = useState(null)
 
   const knownIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
@@ -57,6 +60,9 @@ export default function MainApp({ user }) {
           const song = queue.find(s => s.id === state.songId)
           if (song) setCurrentSong(song)
         }
+        if (typeof state.time === 'number') {
+          setRemoteSeek({ time: state.time, nonce: Date.now() })
+        }
       }
     })
     return unsub
@@ -66,6 +72,7 @@ export default function MainApp({ user }) {
     setCurrentSong(song)
     setIsPlaying(true)
     broadcastPlayback(song.id, true, 0)
+    logPlay(song)
   }
 
   const togglePlay = () => {
@@ -82,6 +89,11 @@ export default function MainApp({ user }) {
   const prevSong = () => {
     const idx = queue.findIndex(s => s.id === currentSong?.id)
     if (idx > 0) playSong(queue[idx - 1])
+  }
+
+  const seekTo = (time) => {
+    if (!currentSong) return
+    broadcastPlayback(currentSong.id, isPlaying, time)
   }
 
   return (
@@ -102,6 +114,8 @@ export default function MainApp({ user }) {
             onNext={nextSong}
             onPrev={prevSong}
             queue={queue}
+            onSeek={seekTo}
+            remoteSeek={remoteSeek}
           />
         )}
         {tab === 'queue' && (
@@ -122,6 +136,7 @@ export default function MainApp({ user }) {
           />
         )}
         {tab === 'notes' && <NotesView />}
+        {tab === 'history' && <HistoryView onPlaySong={playSong} />}
       </div>
       <BottomNav tab={tab} setTab={setTab} />
     </div>

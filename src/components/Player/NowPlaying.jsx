@@ -1,11 +1,28 @@
 ﻿import { useEffect, useRef, useState } from 'react'
 
-export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNext, onPrev, queue }) {
+function formatTime(sec) {
+  if (!isFinite(sec) || sec < 0) return '0:00'
+  const m = Math.floor(sec / 60)
+  const s = Math.floor(sec % 60).toString().padStart(2, '0')
+  return `${m}:${s}`
+}
+
+export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNext, onPrev, queue, onSeek, remoteSeek }) {
   const [playerReady, setPlayerReady] = useState(false)
   const [videoVisible, setVideoVisible] = useState(true)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [seeking, setSeeking] = useState(false)
+  const [seekValue, setSeekValue] = useState(0)
+
   const playerInstanceRef = useRef(null)
   const currentSongIdRef = useRef(null)
   const pendingVideoIdRef = useRef(null)
+
+  useEffect(() => {
+    setCurrentTime(0)
+    setDuration(0)
+  }, [currentSong?.id])
 
   useEffect(() => {
     if (!currentSong) return
@@ -67,11 +84,68 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
     }
   }, [isPlaying, playerReady])
 
+  useEffect(() => {
+    if (!playerReady) return
+    const interval = setInterval(() => {
+      const player = playerInstanceRef.current
+      if (!player || typeof player.getCurrentTime !== 'function') return
+      if (!seeking) {
+        setCurrentTime(player.getCurrentTime() || 0)
+      }
+      setDuration(player.getDuration() || 0)
+    }, 500)
+    return () => clearInterval(interval)
+  }, [playerReady, seeking])
+
+  useEffect(() => {
+    if (!remoteSeek || !playerInstanceRef.current) return
+    if (typeof playerInstanceRef.current.seekTo === 'function') {
+      playerInstanceRef.current.seekTo(remoteSeek.time, true)
+      setCurrentTime(remoteSeek.time)
+    }
+  }, [remoteSeek?.nonce])
+
+  const handleSeekInput = (e) => {
+    setSeeking(true)
+    setSeekValue(Number(e.target.value))
+  }
+
+  const handleSeekCommit = (e) => {
+    const time = Number(e.target.value)
+    setSeeking(false)
+    setCurrentTime(time)
+    if (playerInstanceRef.current?.seekTo) {
+      playerInstanceRef.current.seekTo(time, true)
+    }
+    onSeek && onSeek(time)
+  }
+
+  useEffect(() => {
+    if (!currentSong || !('mediaSession' in navigator)) return
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentSong.title || 'Unknown',
+      artist: currentSong.artist || '',
+      album: 'You & Me',
+      artwork: currentSong.thumbnail
+        ? [{ src: currentSong.thumbnail, sizes: '512x512', type: 'image/jpeg' }]
+        : []
+    })
+    navigator.mediaSession.setActionHandler('play', () => onTogglePlay())
+    navigator.mediaSession.setActionHandler('pause', () => onTogglePlay())
+    navigator.mediaSession.setActionHandler('previoustrack', () => onPrev())
+    navigator.mediaSession.setActionHandler('nexttrack', () => onNext())
+  }, [currentSong?.id, onTogglePlay, onNext, onPrev])
+
+  useEffect(() => {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused'
+    }
+  }, [isPlaying])
+
   return (
     <div className="flex flex-col min-h-screen bg-background px-4 pt-12">
       {currentSong ? (
         <>
-          {/* YouTube Player - stays mounted so audio keeps playing even when hidden */}
           <div
             className={`rounded-2xl overflow-hidden bg-black mb-6 transition-all ${
               videoVisible ? 'block' : 'sr-only'
@@ -87,7 +161,6 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
             </div>
           )}
 
-          {/* Song Info */}
           <div className="text-center mb-4">
             <h2 className="text-white text-xl font-bold leading-tight mb-1 line-clamp-2">
               {currentSong.title}
@@ -98,7 +171,23 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
             )}
           </div>
 
-          {/* Sync badge + audio/video toggle */}
+          <div className="mb-6">
+            <input
+              type="range"
+              min={0}
+              max={duration || 0}
+              step={1}
+              value={seeking ? seekValue : currentTime}
+              onInput={handleSeekInput}
+              onChange={handleSeekCommit}
+              className="w-full h-1.5 rounded-full accent-accent cursor-pointer"
+            />
+            <div className="flex justify-between text-subtext text-xs mt-1">
+              <span>{formatTime(seeking ? seekValue : currentTime)}</span>
+              <span>{formatTime(duration)}</span>
+            </div>
+          </div>
+
           <div className="flex items-center justify-center gap-3 mb-8">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
             <span className="text-subtext text-xs">Synced with your partner</span>
@@ -110,7 +199,6 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
             </button>
           </div>
 
-          {/* Controls */}
           <div className="flex items-center justify-center gap-12">
             <button
               onClick={onPrev}
