@@ -21,6 +21,7 @@ export default function MainApp({ user }) {
 
   const knownIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
+  const currentTimeRef = useRef(0)
 
   useEffect(() => {
     const unsub = observeQueue((songs) => {
@@ -68,9 +69,18 @@ export default function MainApp({ user }) {
     return unsub
   }, [queue, currentSong])
 
+  useEffect(() => {
+    if (!isPlaying || !currentSong) return
+    const interval = setInterval(() => {
+      broadcastPlayback(currentSong.id, isPlaying, currentTimeRef.current)
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [isPlaying, currentSong])
+
   const playSong = (song) => {
     setCurrentSong(song)
     setIsPlaying(true)
+    currentTimeRef.current = 0
     broadcastPlayback(song.id, true, 0)
     logPlay(song)
   }
@@ -78,7 +88,7 @@ export default function MainApp({ user }) {
   const togglePlay = () => {
     const next = !isPlaying
     setIsPlaying(next)
-    if (currentSong) broadcastPlayback(currentSong.id, next, 0)
+    if (currentSong) broadcastPlayback(currentSong.id, next, currentTimeRef.current)
   }
 
   const nextSong = () => {
@@ -93,6 +103,7 @@ export default function MainApp({ user }) {
 
   const seekTo = (time) => {
     if (!currentSong) return
+    currentTimeRef.current = time
     broadcastPlayback(currentSong.id, isPlaying, time)
   }
 
@@ -106,7 +117,7 @@ export default function MainApp({ user }) {
       )}
 
       <div className="flex-1 overflow-y-auto pb-20">
-        {tab === 'player' && (
+        <div className={tab === 'player' ? '' : 'hidden'}>
           <NowPlaying
             currentSong={currentSong}
             isPlaying={isPlaying}
@@ -116,8 +127,10 @@ export default function MainApp({ user }) {
             queue={queue}
             onSeek={seekTo}
             remoteSeek={remoteSeek}
+            timeRef={currentTimeRef}
           />
-        )}
+        </div>
+
         {tab === 'queue' && (
           <QueueView
             queue={queue}

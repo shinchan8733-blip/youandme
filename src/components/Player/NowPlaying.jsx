@@ -7,7 +7,7 @@ function formatTime(sec) {
   return `${m}:${s}`
 }
 
-export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNext, onPrev, queue, onSeek, remoteSeek }) {
+export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNext, onPrev, queue, onSeek, remoteSeek, timeRef }) {
   const [playerReady, setPlayerReady] = useState(false)
   const [videoVisible, setVideoVisible] = useState(true)
   const [currentTime, setCurrentTime] = useState(0)
@@ -93,9 +93,11 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
     const interval = setInterval(() => {
       const player = playerInstanceRef.current
       if (!player || typeof player.getCurrentTime !== 'function') return
+      const t = player.getCurrentTime() || 0
       if (!seeking) {
-        setCurrentTime(player.getCurrentTime() || 0)
+        setCurrentTime(t)
       }
+      if (timeRef) timeRef.current = t
       setDuration(player.getDuration() || 0)
     }, 500)
     return () => clearInterval(interval)
@@ -103,9 +105,13 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
 
   useEffect(() => {
     if (!remoteSeek || !playerInstanceRef.current) return
-    if (typeof playerInstanceRef.current.seekTo === 'function') {
-      playerInstanceRef.current.seekTo(remoteSeek.time, true)
+    const player = playerInstanceRef.current
+    if (typeof player.seekTo !== 'function') return
+    const localTime = typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0
+    if (Math.abs(localTime - remoteSeek.time) > 2) {
+      player.seekTo(remoteSeek.time, true)
       setCurrentTime(remoteSeek.time)
+      if (timeRef) timeRef.current = remoteSeek.time
     }
   }, [remoteSeek?.nonce])
 
@@ -162,6 +168,7 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
     const time = Number(e.target.value)
     setSeeking(false)
     setCurrentTime(time)
+    if (timeRef) timeRef.current = time
     if (playerInstanceRef.current?.seekTo) {
       playerInstanceRef.current.seekTo(time, true)
     }
