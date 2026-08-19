@@ -18,6 +18,10 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
   const playerInstanceRef = useRef(null)
   const currentSongIdRef = useRef(null)
   const pendingVideoIdRef = useRef(null)
+  const wakeLockRef = useRef(null)
+  const isPlayingRef = useRef(isPlaying)
+
+  useEffect(() => { isPlayingRef.current = isPlaying }, [isPlaying])
 
   useEffect(() => {
     setCurrentTime(0)
@@ -104,6 +108,50 @@ export default function NowPlaying({ currentSong, isPlaying, onTogglePlay, onNex
       setCurrentTime(remoteSeek.time)
     }
   }, [remoteSeek?.nonce])
+
+  useEffect(() => {
+    let cancelled = false
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && isPlaying && document.visibilityState === 'visible') {
+          const lock = await navigator.wakeLock.request('screen')
+          if (!cancelled) {
+            wakeLockRef.current = lock
+          } else {
+            lock.release().catch(() => {})
+          }
+        }
+      } catch (err) {}
+    }
+    requestWakeLock()
+    return () => {
+      cancelled = true
+      wakeLockRef.current?.release?.().catch(() => {})
+      wakeLockRef.current = null
+    }
+  }, [isPlaying])
+
+  useEffect(() => {
+    const handleVisibility = async () => {
+      if (document.visibilityState !== 'visible') return
+
+      if (isPlayingRef.current && 'wakeLock' in navigator && !wakeLockRef.current) {
+        try {
+          wakeLockRef.current = await navigator.wakeLock.request('screen')
+        } catch (err) {}
+      }
+
+      const player = playerInstanceRef.current
+      if (player && isPlayingRef.current && typeof player.getPlayerState === 'function') {
+        const state = player.getPlayerState()
+        if (state !== 1 && typeof player.playVideo === 'function') {
+          player.playVideo()
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
 
   const handleSeekInput = (e) => {
     setSeeking(true)
