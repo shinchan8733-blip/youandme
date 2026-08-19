@@ -61,8 +61,8 @@ export default function MainApp({ user }) {
           const song = queue.find(s => s.id === state.songId)
           if (song) setCurrentSong(song)
         }
-        if (typeof state.time === 'number') {
-          setRemoteSeek({ time: state.time, nonce: Date.now() })
+        if (typeof state.currentTime === 'number') {
+          setRemoteSeek({ time: state.currentTime, nonce: Date.now() })
         }
       }
     })
