@@ -3,6 +3,7 @@ import NowPlaying from '../Player/NowPlaying'
 import QueueView from '../Queue/QueueView'
 import DiscoveryView from '../Discovery/DiscoveryView'
 import OurSongsView from '../OurSongs/OurSongsView'
+import NotesView from '../Notes/NotesView'
 import BottomNav from './BottomNav'
 import { observeQueue, addToQueue } from '../../services/queueService'
 import { observePlayback, broadcastPlayback } from '../../services/syncService'
@@ -120,6 +121,7 @@ export default function MainApp({ user }) {
             onAddToQueue={addToQueue}
           />
         )}
+        {tab === 'notes' && <NotesView />}
       </div>
       <BottomNav tab={tab} setTab={setTab} />
     </div>
