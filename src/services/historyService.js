@@ -1,10 +1,11 @@
 import { db } from '../config/firebase'
 import { ref as dbRef, push, query, orderByChild, limitToLast, onValue, off } from 'firebase/database'
 import { getCurrentUser } from './authService'
+import { roomPath } from './roomContext'
 
 export const logPlay = async (song) => {
   const user = getCurrentUser()
-  const historyRef = dbRef(db, 'history')
+  const historyRef = dbRef(db, roomPath('history'))
   await push(historyRef, {
     songId: song.id,
     title: song.title,
@@ -16,7 +17,7 @@ export const logPlay = async (song) => {
 }
 
 export const observeHistory = (callback) => {
-  const historyRef = query(dbRef(db, 'history'), orderByChild('playedAt'), limitToLast(200))
+  const historyRef = query(dbRef(db, roomPath('history')), orderByChild('playedAt'), limitToLast(200))
   const listener = onValue(historyRef, (snapshot) => {
     const data = snapshot.val() || {}
     const items = Object.entries(data).map(([id, item]) => ({ id, ...item }))

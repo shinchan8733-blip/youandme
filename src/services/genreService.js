@@ -1,9 +1,10 @@
 import { db } from '../config/firebase'
 import { ref as dbRef, push, set, remove, onValue, off } from 'firebase/database'
 import { getCurrentUser } from './authService'
+import { roomPath } from './roomContext'
 
 export const createGenre = async (name) => {
-  const genresRef = dbRef(db, 'genres')
+  const genresRef = dbRef(db, roomPath('genres'))
   const newRef = push(genresRef)
   await set(newRef, {
     name,
@@ -14,11 +15,11 @@ export const createGenre = async (name) => {
 }
 
 export const deleteGenre = async (genreId) => {
-  await remove(dbRef(db, `genres/${genreId}`))
+  await remove(dbRef(db, `${roomPath('genres')}/${genreId}`))
 }
 
 export const addSongToGenre = async (genreId, song) => {
-  const songsRef = dbRef(db, `genres/${genreId}/songs`)
+  const songsRef = dbRef(db, `${roomPath('genres')}/${genreId}/songs`)
   const newRef = push(songsRef)
   await set(newRef, {
     songId: song.id,
@@ -30,11 +31,11 @@ export const addSongToGenre = async (genreId, song) => {
 }
 
 export const removeSongFromGenre = async (genreId, songKey) => {
-  await remove(dbRef(db, `genres/${genreId}/songs/${songKey}`))
+  await remove(dbRef(db, `${roomPath('genres')}/${genreId}/songs/${songKey}`))
 }
 
 export const observeGenres = (callback) => {
-  const genresRef = dbRef(db, 'genres')
+  const genresRef = dbRef(db, roomPath('genres'))
   const listener = onValue(genresRef, (snapshot) => {
     const data = snapshot.val() || {}
     const genres = Object.entries(data).map(([id, g]) => ({

@@ -1,10 +1,11 @@
 import { db } from '../config/firebase'
 import { ref as dbRef, push, onValue, off } from 'firebase/database'
 import { getCurrentUser } from './authService'
+import { roomPath } from './roomContext'
 
 export const addTextNote = async (text) => {
   const user = getCurrentUser()
-  const notesRef = dbRef(db, 'notes')
+  const notesRef = dbRef(db, roomPath('notes'))
   await push(notesRef, {
     type: 'text',
     content: text,
@@ -15,7 +16,7 @@ export const addTextNote = async (text) => {
 
 export const addVoiceNote = async (base64Audio, mimeType) => {
   const user = getCurrentUser()
-  const notesRef = dbRef(db, 'notes')
+  const notesRef = dbRef(db, roomPath('notes'))
   await push(notesRef, {
     type: 'voice',
     audioData: base64Audio,
@@ -26,7 +27,7 @@ export const addVoiceNote = async (base64Audio, mimeType) => {
 }
 
 export const observeNotes = (callback) => {
-  const notesRef = dbRef(db, 'notes')
+  const notesRef = dbRef(db, roomPath('notes'))
   const listener = onValue(notesRef, (snapshot) => {
     const data = snapshot.val() || {}
     const notes = Object.entries(data).map(([id, note]) => ({ id, ...note }))

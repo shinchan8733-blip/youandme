@@ -6,10 +6,11 @@ import {
   set
 } from 'firebase/database'
 import { getCurrentUser } from './authService'
+import { roomPath } from './roomContext'
 
 export const addToQueue = (song) => {
   const user = getCurrentUser()
-  return set(ref(db, `queue/${song.id}`), {
+  return set(ref(db, `${roomPath('queue')}/${song.id}`), {
     ...song,
     addedBy: user?.email?.split('@')[0] ?? 'unknown',
     addedAt: Date.now()
@@ -17,10 +18,10 @@ export const addToQueue = (song) => {
 }
 
 export const removeFromQueue = (songId) =>
-  remove(ref(db, `queue/${songId}`))
+  remove(ref(db, `${roomPath('queue')}/${songId}`))
 
 export const observeQueue = (callback) =>
-  onValue(ref(db, 'queue'), (snapshot) => {
+  onValue(ref(db, roomPath('queue')), (snapshot) => {
     const data = snapshot.val()
     if (!data) return callback([])
     const songs = Object.values(data).sort((a, b) => a.addedAt - b.addedAt)
@@ -28,13 +29,13 @@ export const observeQueue = (callback) =>
   })
 
 export const addToOurSongs = (song) =>
-  set(ref(db, `ourSongs/${song.id}`), { ...song, isFavorite: true })
+  set(ref(db, `${roomPath('ourSongs')}/${song.id}`), { ...song, isFavorite: true })
 
 export const removeFromOurSongs = (songId) =>
-  remove(ref(db, `ourSongs/${songId}`))
+  remove(ref(db, `${roomPath('ourSongs')}/${songId}`))
 
 export const observeOurSongs = (callback) =>
-  onValue(ref(db, 'ourSongs'), (snapshot) => {
+  onValue(ref(db, roomPath('ourSongs')), (snapshot) => {
     const data = snapshot.val()
     if (!data) return callback([])
     const songs = Object.values(data).sort((a, b) => b.addedAt - a.addedAt)
