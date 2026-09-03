@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
+import { signOut } from 'firebase/auth'
+import { auth } from '../../config/firebase'
 import NowPlaying from '../Player/NowPlaying'
 import QueueView from '../Queue/QueueView'
 import DiscoveryView from '../Discovery/DiscoveryView'
@@ -109,8 +111,21 @@ export default function MainApp({ user }) {
     broadcastPlayback(currentSong.id, isPlaying, time)
   }
 
+  const handleLogout = () => {
+    if (window.confirm('Log out?')) {
+      signOut(auth)
+    }
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden relative">
+      <button
+        onClick={handleLogout}
+        className="absolute top-4 right-4 z-40 text-subtext text-xs bg-surface/80 px-3 py-1.5 rounded-full border border-white/10"
+      >
+        Logout
+      </button>
+
       {toast && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-surface border border-accent/40 text-white text-sm px-4 py-3 rounded-xl shadow-lg shadow-black/40 flex items-center gap-2 max-w-[90%]">
           <span className="text-accent">♥</span>
