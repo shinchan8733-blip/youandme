@@ -16,6 +16,30 @@ export const getMyPendingInviteCode = async () => {
   return snap.exists() ? snap.val() : null
 }
 
+export const getRoomMemberCount = async (roomId) => {
+  const snap = await get(dbRef(db, `rooms/${roomId}/members`))
+  return snap.exists() ? Object.keys(snap.val()).length : 0
+}
+
+export const createInviteForRoom = async (roomId) => {
+  const user = getCurrentUser()
+  if (!user) throw new Error('Not logged in')
+
+  const invitesRef = dbRef(db, 'invites')
+  const newInviteRef = push(invitesRef)
+  const inviteCode = newInviteRef.key
+
+  await set(newInviteRef, {
+    roomId,
+    createdBy: user.uid,
+    status: 'pending',
+    createdAt: Date.now()
+  })
+  await set(dbRef(db, `users/${user.uid}/pendingInviteCode`), inviteCode)
+
+  return inviteCode
+}
+
 export const createRoomAndInvite = async () => {
   const user = getCurrentUser()
   if (!user) throw new Error('Not logged in')
@@ -30,17 +54,7 @@ export const createRoomAndInvite = async () => {
   })
   await set(dbRef(db, `users/${user.uid}/roomId`), roomId)
 
-  const invitesRef = dbRef(db, 'invites')
-  const newInviteRef = push(invitesRef)
-  const inviteCode = newInviteRef.key
-
-  await set(newInviteRef, {
-    roomId,
-    createdBy: user.uid,
-    status: 'pending',
-    createdAt: Date.now()
-  })
-  await set(dbRef(db, `users/${user.uid}/pendingInviteCode`), inviteCode)
+  const inviteCode = await createInviteForRoom(roomId)
 
   return { roomId, inviteCode }
 }

@@ -9,6 +9,7 @@ import NotesView from '../Notes/NotesView'
 import HistoryView from '../History/HistoryView'
 import GenresView from '../Genres/GenresView'
 import PhotosView from '../Photos/PhotosView'
+import InvitePartnerModal from '../Invite/InvitePartnerModal'
 import BottomNav from './BottomNav'
 import { observeQueue, addToQueue } from '../../services/queueService'
 import { observePlayback, broadcastPlayback } from '../../services/syncService'
@@ -24,6 +25,7 @@ export default function MainApp({ user }) {
   const [toast, setToast] = useState(null)
   const [remoteSeek, setRemoteSeek] = useState(null)
   const [partnerOnline, setPartnerOnline] = useState(null)
+  const [showInvite, setShowInvite] = useState(false)
 
   const knownIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
@@ -157,12 +159,22 @@ export default function MainApp({ user }) {
         </span>
       </div>
 
-      <button
-        onClick={handleLogout}
-        className="absolute top-4 right-4 z-40 text-subtext text-xs bg-surface/80 px-3 py-1.5 rounded-full border border-white/10"
-      >
-        Logout
-      </button>
+      <div className="absolute top-4 right-4 z-40 flex items-center gap-2">
+        <button
+          onClick={() => setShowInvite(true)}
+          className="text-subtext text-xs bg-surface/80 px-3 py-1.5 rounded-full border border-white/10"
+        >
+          Invite
+        </button>
+        <button
+          onClick={handleLogout}
+          className="text-subtext text-xs bg-surface/80 px-3 py-1.5 rounded-full border border-white/10"
+        >
+          Logout
+        </button>
+      </div>
+
+      {showInvite && <InvitePartnerModal onClose={() => setShowInvite(false)} />}
 
       {toast && (
         <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-surface border border-accent/40 text-white text-sm px-4 py-3 rounded-xl shadow-lg shadow-black/40 flex items-center gap-2 max-w-[90%]">
