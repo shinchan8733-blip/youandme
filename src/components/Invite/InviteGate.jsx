@@ -40,7 +40,9 @@ export default function InviteGate({ children }) {
     setProcessing(true)
     setError('')
     try {
-      const { inviteCode } = await createRoomAndInvite()
+      const { roomId: newRoomId, inviteCode } = await createRoomAndInvite()
+      setCurrentRoomId(newRoomId)
+      setRoomId(newRoomId)
       setMyInviteCode(inviteCode)
     } catch (err) {
       setError('Could not create your space. Try again.')
@@ -155,7 +157,7 @@ export default function InviteGate({ children }) {
           >
             Copy link
           </button>
-          <p className="text-subtext text-xs mt-3">Waiting for them to accept...</p>
+          <p className="text-subtext text-xs mt-3">You're all set — share this link if you haven't already.</p>
         </div>
       )}
     </div>

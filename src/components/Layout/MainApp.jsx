@@ -14,6 +14,7 @@ import { observeQueue, addToQueue } from '../../services/queueService'
 import { observePlayback, broadcastPlayback } from '../../services/syncService'
 import { getCurrentUser } from '../../services/authService'
 import { logPlay } from '../../services/historyService'
+import { setupPresence, observePresence } from '../../services/presenceService'
 
 export default function MainApp({ user }) {
   const [tab, setTab] = useState('player')
@@ -22,10 +23,28 @@ export default function MainApp({ user }) {
   const [isPlaying, setIsPlaying] = useState(false)
   const [toast, setToast] = useState(null)
   const [remoteSeek, setRemoteSeek] = useState(null)
+  const [partnerOnline, setPartnerOnline] = useState(null)
 
   const knownIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
   const currentTimeRef = useRef(0)
+
+  useEffect(() => {
+    const unsubPresence = setupPresence()
+    const unsubObserve = observePresence((data) => {
+      const myUid = getCurrentUser()?.uid
+      const partnerEntry = Object.entries(data).find(([uid]) => uid !== myUid)
+      if (!partnerEntry) {
+        setPartnerOnline(null)
+      } else {
+        setPartnerOnline(!!partnerEntry[1].online)
+      }
+    })
+    return () => {
+      unsubPresence()
+      unsubObserve()
+    }
+  }, [])
 
   useEffect(() => {
     const unsub = observeQueue((songs) => {
@@ -119,6 +138,25 @@ export default function MainApp({ user }) {
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden relative">
+      <div className="absolute top-4 left-4 z-40 flex items-center gap-1.5 bg-surface/80 px-3 py-1.5 rounded-full border border-white/10">
+        <span
+          className={`w-2 h-2 rounded-full ${
+            partnerOnline === true
+              ? 'bg-green-400'
+              : partnerOnline === false
+              ? 'bg-gray-500'
+              : 'bg-yellow-400'
+          }`}
+        />
+        <span className="text-subtext text-xs whitespace-nowrap">
+          {partnerOnline === true
+            ? 'Partner online'
+            : partnerOnline === false
+            ? 'Partner offline'
+            : 'Waiting for partner'}
+        </span>
+      </div>
+
       <button
         onClick={handleLogout}
         className="absolute top-4 right-4 z-40 text-subtext text-xs bg-surface/80 px-3 py-1.5 rounded-full border border-white/10"
@@ -127,7 +165,7 @@ export default function MainApp({ user }) {
       </button>
 
       {toast && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-surface border border-accent/40 text-white text-sm px-4 py-3 rounded-xl shadow-lg shadow-black/40 flex items-center gap-2 max-w-[90%]">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-surface border border-accent/40 text-white text-sm px-4 py-3 rounded-xl shadow-lg shadow-black/40 flex items-center gap-2 max-w-[90%]">
           <span className="text-accent">♥</span>
           <span className="truncate">{toast}</span>
         </div>
